@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YoklamaPilot — Ders & Devamsızlık Takibi</title>
+  <!-- Phosphor Icons Regular -->
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Header with Glassmorphism -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="brand">
+        <div class="brand-badge">
+          <i class="ph ph-student"></i>
+        </div>
+        <div>
+          <h1 class="brand-title">YoklamaPilot</h1>
+          <p class="brand-subtitle">İÜC Bilgisayar Mühendisliği • 5. Yarıyıl (Güz 2026)</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <div id="syncBadge" class="sync-badge" title="Senkronizasyon durumu">
+          <span class="sync-dot"></span>
+          <span id="syncText">Yerel Mod</span>
+        </div>
+        <div id="authContainer">
+          <button id="btnLogin" class="btn btn-primary" title="Google hesabınla bağlan">
+            <i class="ph ph-google-logo"></i>
+            <span>Google ile Giriş</span>
+          </button>
+          <div id="userProfile" class="user-profile" style="display: none;">
+            <i class="ph ph-user"></i>
+            <span id="userName" class="user-name">Giriş Yapıldı</span>
+            <button id="btnLogout" class="btn btn-sm btn-outline-muted" title="Çıkış yap">
+              <i class="ph ph-sign-out"></i>
+            </button>
+          </div>
+        </div>
+        <button id="btnExport" class="btn btn-secondary" title="Verileri JSON olarak indir">
+          <i class="ph ph-download-simple"></i>
+          <span>Yedekle</span>
+        </button>
+        <button id="btnImport" class="btn btn-secondary" title="JSON yedeği yükle">
+          <i class="ph ph-upload-simple"></i>
+          <span>Yükle</span>
+        </button>
+        <input type="file" id="fileInput" accept=".json" style="display: none;">
+      </div>
+    </div>
+  </header>
+
+  <main class="app-main">
+    <!-- Quick Stats Bar -->
+    <section class="overview-section">
+      <div class="stat-card">
+        <div class="stat-icon stat-icon-indigo">
+          <i class="ph ph-calendar-check"></i>
+        </div>
+        <div class="stat-info">
+          <span class="stat-label">Toplam İşlenen Blok</span>
+          <span id="statTotalHeld" class="stat-value">0</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon stat-icon-green">
+          <i class="ph ph-check-circle"></i>
+        </div>
+        <div class="stat-info">
+          <span class="stat-label">Katılınan Ders</span>
+          <span id="statAttended" class="stat-value">0</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon stat-icon-amber">
+          <i class="ph ph-x-circle"></i>
+        </div>
+        <div class="stat-info">
+          <span class="stat-label">Girilmemiş / Devamsız</span>
+          <span id="statAbsent" class="stat-value">0</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon stat-icon-purple">
+          <i class="ph ph-percent"></i>
+        </div>
+        <div class="stat-info">
+          <span class="stat-label">Genel Devam Oranı</span>
+          <span id="statPercentage" class="stat-value">%100</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Week Navigator -->
+    <section class="week-nav-section">
+      <div class="section-header">
+        <div class="section-title-wrap">
+          <i class="ph ph-calendar-blank section-icon"></i>
+          <h2>Haftalık Takip</h2>
+        </div>
+        <div class="quick-batch-actions">
+          <button id="btnMarkWeekAttended" class="btn btn-sm btn-outline-success">
+            <i class="ph ph-checks"></i>
+            <span>Bu Haftanın Tümüne Girdim</span>
+          </button>
+          <button id="btnResetWeek" class="btn btn-sm btn-outline-muted">
+            <i class="ph ph-arrow-counter-clockwise"></i>
+            <span>Haftayı Sıfırla</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="week-tabs-scroll">
+        <div id="weekTabsContainer" class="week-tabs">
+          <!-- Dynamically populated 1 to 14 -->
+        </div>
+      </div>
+    </section>
+
+    <!-- Active Week Lessons List -->
+    <section class="active-week-section">
+      <div class="active-week-header">
+        <div>
+          <h3 id="currentWeekTitle" class="current-week-title">4. Hafta Dersleri</h3>
+          <p class="current-week-desc">Haftanın günlerine göre derslerinize katılım durumunuzu tek tıkla işaretleyin.</p>
+        </div>
+        <div class="status-legend">
+          <span class="legend-item"><span class="dot dot-attended"></span> Girdim</span>
+          <span class="legend-item"><span class="dot dot-absent"></span> Gitmedim</span>
+          <span class="legend-item"><span class="dot dot-cancelled"></span> İptal/Tatil</span>
+          <span class="legend-item"><span class="dot dot-unrecorded"></span> Bekliyor</span>
+        </div>
+      </div>
+
+      <div id="activeWeekCardsContainer" class="week-cards-grid">
+        <!-- Lessons for active week rendered here -->
+      </div>
+    </section>
+
+    <!-- Course Overview & Limits -->
+    <section class="courses-summary-section">
+      <div class="section-header">
+        <div class="section-title-wrap">
+          <i class="ph ph-chart-donut section-icon"></i>
+          <h2>Ders Bazlı Devam & Kalan Haklar</h2>
+        </div>
+        <div class="threshold-info">
+          <span class="badge badge-subtle">Teori Barajı: %70 (Maks 4 Hafta)</span>
+          <span class="badge badge-subtle">Lab Barajı: %80 (Maks 2 Hafta)</span>
+        </div>
+      </div>
+
+      <div id="courseCardsGrid" class="course-cards-grid">
+        <!-- 9 Courses summary cards rendered here -->
+      </div>
+    </section>
+
+    <!-- Full 14-Week Matrix Table -->
+    <section class="matrix-section">
+      <div class="section-header">
+        <div class="section-title-wrap">
+          <i class="ph ph-table section-icon"></i>
+          <h2>Tüm Dönem Yoklama Matrisi (1 - 14. Hafta)</h2>
+        </div>
+        <p class="matrix-hint">Hücrelere doğrudan tıklayarak durumunu (Katıldı / Gitmedi / İptal) değiştirebilirsiniz.</p>
+      </div>
+
+      <div class="table-responsive">
+        <table class="matrix-table" id="matrixTable">
+          <thead>
+            <tr>
+              <th class="th-course">Ders Adı</th>
+              <th class="th-type">Tür</th>
+              <!-- H1..H14 headers -->
+              <th class="th-w">H1</th>
+              <th class="th-w">H2</th>
+              <th class="th-w">H3</th>
+              <th class="th-w">H4</th>
+              <th class="th-w">H5</th>
+              <th class="th-w">H6</th>
+              <th class="th-w">H7</th>
+              <th class="th-w">H8</th>
+              <th class="th-w">H9</th>
+              <th class="th-w">H10</th>
+              <th class="th-w">H11</th>
+              <th class="th-w">H12</th>
+              <th class="th-w">H13</th>
+              <th class="th-w">H14</th>
+              <th class="th-stat">Devam</th>
+              <th class="th-stat">Kalan Hak</th>
+            </tr>
+          </thead>
+          <tbody id="matrixTableBody">
+            <!-- Dynamic Rows -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    <p>YoklamaPilot • İÜC Bilgisayar Mühendisliği • Bulut & Yerel Çift Katmanlı Senkronizasyon</p>
+  </footer>
+
+  <!-- Firebase Compat CDN Scripts -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <!-- Firebase Config & App -->
+  <script src="firebase-config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
