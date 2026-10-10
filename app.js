@@ -146,8 +146,21 @@ let appState = {
 // Firebase Instances
 let auth = null;
 let db = null;
+let analytics = null;
 let currentUser = null;
 let unsubscribeUserDoc = null;
+
+// Analytics Event Logger Helper
+function logAnalyticsEvent(eventName, params = {}) {
+  if (analytics) {
+    try {
+      analytics.logEvent(eventName, params);
+      console.log(`[Analytics] Event: ${eventName}`, params);
+    } catch (e) {
+      console.warn("[Analytics] Event error:", e);
+    }
+  }
+}
 
 // Initialize State
 function initStore() {
@@ -329,6 +342,7 @@ function renderWeekTabs() {
 
     btn.addEventListener("click", () => {
       appState.activeWeek = w;
+      logAnalyticsEvent("select_week", { week: w });
       saveStore();
       renderApp();
     });
@@ -517,6 +531,14 @@ function updateAttendance(courseId, week, status) {
   appState.attendance[courseId][week] = status;
   saveStore();
   renderApp();
+
+  const course = COURSES.find(c => c.id === courseId);
+  logAnalyticsEvent("attendance_marked", {
+    course_id: courseId,
+    course_name: course ? course.name : courseId,
+    status: status,
+    week: week
+  });
 }
 
 // Batch Actions
@@ -527,6 +549,7 @@ document.getElementById("btnMarkWeekAttended").addEventListener("click", () => {
   });
   saveStore();
   renderApp();
+  logAnalyticsEvent("batch_mark_week", { week: w, action: "all_attended" });
   showToast(`${w}. haftadaki tüm dersler "Girdim" olarak işaretlendi.`);
 });
 
@@ -538,6 +561,7 @@ document.getElementById("btnResetWeek").addEventListener("click", () => {
     });
     saveStore();
     renderApp();
+    logAnalyticsEvent("batch_mark_week", { week: w, action: "reset" });
     showToast(`${w}. hafta sıfırlandı.`);
   }
 });
@@ -550,6 +574,7 @@ document.getElementById("btnExport").addEventListener("click", () => {
   dlAnchorElem.setAttribute("href", dataStr);
   dlAnchorElem.setAttribute("download", `YoklamaPilot_Yedek_${dateStr}.json`);
   dlAnchorElem.click();
+  logAnalyticsEvent("export_data");
   showToast("Yedek dosyası indirildi.");
 });
 
@@ -570,6 +595,7 @@ document.getElementById("fileInput").addEventListener("change", (e) => {
         appState = imported;
         saveStore();
         renderApp();
+        logAnalyticsEvent("import_data");
         showToast("Yedek başarıyla yüklendi!");
       } else {
         alert("Geçersiz yedek dosyası!");
@@ -672,6 +698,18 @@ function initFirebase() {
       auth = firebase.auth();
       db = firebase.firestore();
 
+      // Firebase Analytics Başlatma
+      if (typeof firebase.analytics === "function" && firebaseConfig.measurementId) {
+        try {
+          analytics = firebase.analytics();
+          console.log("[Analytics] Firebase Analytics başlatıldı.");
+        } catch (e) {
+          console.warn("[Analytics] Başlatma uyarısı:", e);
+        }
+      } else {
+        console.info("[Analytics] measurementId tanımlanmamış, analytics beklemede.");
+      }
+
       // Offline önbellekleme
       db.enablePersistence({ synchronizeTabs: true }).catch(err => {
         console.log("Firestore offline persistence bildirimi:", err.code);
@@ -681,9 +719,11 @@ function initFirebase() {
         currentUser = user;
         updateAuthUI(user);
         if (user) {
+          logAnalyticsEvent("login", { method: "Google" });
           setupRealtimeSync(user.uid);
           showToast(`Hoş geldin, ${user.displayName || "Kullanıcı"}!`);
         } else {
+          logAnalyticsEvent("logout");
           if (unsubscribeUserDoc) {
             unsubscribeUserDoc();
             unsubscribeUserDoc = null;
